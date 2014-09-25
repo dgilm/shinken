@@ -124,7 +124,7 @@ class ServicesExtInfo(Items):
     # Merge extended host information into host
     def merge(self, services):
         for ei in self:
-            if hasattr(ei, 'register') and getattr(ei, 'register') == '0':
+            if hasattr(ei, 'register') and not getattr(ei, 'register') :
                 # We don't have to merge template
                 continue
             hosts_names = ei.get_name().split(",")
