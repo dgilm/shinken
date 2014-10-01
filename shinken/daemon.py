@@ -222,7 +222,7 @@ class Daemon(object):
         self.unlink()
         self.do_stop()
         # Brok facilities are no longer available simply print the message to STDOUT
-        print ("Stopping daemon. Exiting", )
+        print ("Stopping daemon. Exiting")
         sys.exit(0)
 
 
