@@ -332,7 +332,7 @@ class LiveStatusLogStoreSqlite(BaseModule):
 
     def execute(self, cmd, values=None, row_factory=None):
         try:
-            if values == None:
+            if values is None:
                 values = []
             if sqlite3.paramstyle == 'pyformat':
                 matchcount = 0
@@ -353,7 +353,8 @@ class LiveStatusLogStoreSqlite(BaseModule):
                     self.dbcursor = self.dbconn.cursor()
                 self.dbcursor.execute(cmd, values)
                 dbresult = self.dbcursor.fetchall()
-                if row_factory != None:
+
+                if row_factory is not None:
                     if sqlite3.paramstyle == 'pyformat':
                         dbresult = [row_factory(self.dbcursor, d) for d in dbresult]
                     if already_had_row_factory:
@@ -469,13 +470,13 @@ class LiveStatusLogStoreSqlite(BaseModule):
         gepat = re.search(r'^(\(*time|(.*\s+time))\s+>=\s+(\d+)', full_filter_clause)
         ltpat = re.search(r'^(\(*time|(.*\s+time))\s+<\s+(\d+)', full_filter_clause)
         lepat = re.search(r'^(\(*time|(.*\s+time))\s+<=\s+(\d+)', full_filter_clause)
-        if gtpat != None:
+        if gtpat is not None:
             fromtime = int(gtpat.group(3)) + 1
-        if gepat != None:
+        if gepat is not None:
             fromtime = int(gepat.group(3))
-        if ltpat != None:
+        if ltpat is not None:
             totime = int(ltpat.group(3)) - 1
-        if lepat != None:
+        if lepat is not None:
             totime = int(lepat.group(3))
         # now find the list of datafiles
         dbresult = []
