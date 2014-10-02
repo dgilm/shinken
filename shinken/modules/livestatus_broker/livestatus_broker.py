@@ -463,9 +463,10 @@ class LiveStatus_broker(BaseModule, Daemon):
                                 output, keepalive = response.respond()
                                 try:
                                     s.send(output)
+                                except Exception as err:
+                                    logger.error('Could not send response to client: %s' % err)
+                                else:
                                     self.write_protocol('', output)
-                                except Exception, e:
-                                    pass
                                 open_connections[socketid]['buffer'] = None
                                 del open_connections[socketid]['wait']
                                 del open_connections[socketid]['query']
@@ -484,9 +485,10 @@ class LiveStatus_broker(BaseModule, Daemon):
                                     output, keepalive = response.respond()
                                     try:
                                         s.send(output)
+                                    except Exception as err:
+                                        logger.error('Could not send response to client: %s' % err)
+                                    else:
                                         self.write_protocol('', output)
-                                    except Exception, e:
-                                        pass
                                     open_connections[socketid]['buffer'] = None
                                     del open_connections[socketid]['wait']
                                     del open_connections[socketid]['query']
@@ -498,7 +500,6 @@ class LiveStatus_broker(BaseModule, Daemon):
                                 else:
                                     # Condition is not met
                                     open_connections[socketid]['nexttry'] = now + 0.5
-                                    pass
                         else:
                             # This one has no timeout, so try forever
                             pass
@@ -643,7 +644,6 @@ class LiveStatus_broker(BaseModule, Daemon):
                                 open_connections[socketid]['wait'] = wait
                                 open_connections[socketid]['query'] = query
                                 open_connections[socketid]['nexttry'] = now
-                                pass
 
                         if close_it:
                             # Register this socket for deletion
