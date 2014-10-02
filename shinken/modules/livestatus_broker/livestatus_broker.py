@@ -619,11 +619,12 @@ class LiveStatus_broker(BaseModule, Daemon):
                             if isinstance(response, str):
                                 try:
                                     s.send(response)
-                                    self.write_protocol(open_connections[socketid]['buffer'], response)
-                                except:
+                                except Exception as err:
                                     # Maybe the request was an external command and
                                     # the peer is not interested in a response at all
-                                    pass
+                                    logger.warning('Could not send response to client: %s' % err)
+
+                                self.write_protocol(open_connections[socketid]['buffer'], response)
 
                                 # Empty the input buffer for the next request
                                 open_connections[socketid]['buffer'] = None
