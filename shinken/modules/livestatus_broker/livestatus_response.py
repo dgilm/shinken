@@ -24,6 +24,8 @@
 # along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
 
 
+from shinken.log import logger
+
 try:
     from ujson import dumps, loads
 except ImportError:
@@ -116,7 +118,8 @@ class LiveStatusResponse:
                             l.append(str(value))
                         except UnicodeEncodeError:
                             l.append(value.encode('utf-8', 'replace'))
-                        except Exception:
+                        except Exception as err:
+                            logger.error('Unexpected error while building response: %s' % err)
                             l.append('')
                 lines.append(self.separators[1].join(l))
             if len(lines) > 0:
@@ -165,6 +168,7 @@ class LiveStatusResponse:
                         except Exception:
                             rows.append(u'')
                 lines.append(rows)
+
             if self.columnheaders == 'on':
                 if len(aliases) > 0:
                     lines.insert(0, [str(aliases[col]) for col in columns])
