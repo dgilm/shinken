@@ -84,7 +84,8 @@ class LiveStatus(object):
         """
         request = LiveStatusRequest(data, self.datamgr, self.query_cache, self.db, self.pnp_path, self.return_queue, self.counters)
         request.parse_input(data)
-        if sorted([q.my_type for q in request.queries]) == ['command', 'query', 'wait']:
+        squeries = sorted([q.my_type for q in request.queries])
+        if squeries == ['command', 'query', 'wait']:
             # The Multisite way
             for query in [q for q in request.queries if q.my_type == 'command']:
                 result = query.launch_query()
@@ -92,11 +93,11 @@ class LiveStatus(object):
                 response.format_live_data(result, query.columns, query.aliases)
                 output, keepalive = response.respond()
             output = [q for q in request.queries if q.my_type == 'wait'] + [q for q in request.queries if q.my_type == 'query']
-        elif sorted([q.my_type for q in request.queries]) == ['query', 'wait']:
+        elif squeries == ['query', 'wait']:
             # The Thruk way
             output = [q for q in request.queries if q.my_type == 'wait'] + [q for q in request.queries if q.my_type == 'query']
             keepalive = True
-        elif sorted([q.my_type for q in request.queries]) == ['command', 'query']:
+        elif squeries == ['command', 'query']:
             for query in [q for q in request.queries if q.my_type == 'command']:
                 result = query.launch_query()
                 response = query.response
@@ -110,7 +111,7 @@ class LiveStatus(object):
                 response.format_live_data(result, query.columns, query.aliases)
                 output, keepalive = response.respond()
 
-        elif sorted([q.my_type for q in request.queries]) == ['query']:
+        elif squeries == ['query']:
             for query in [q for q in request.queries if q.my_type == 'query']:
                 # This was a simple query, respond immediately
                 result = query.launch_query()
@@ -118,12 +119,14 @@ class LiveStatus(object):
                 response = query.response
                 response.format_live_data(result, query.columns, query.aliases)
                 output, keepalive = response.respond()
-        elif sorted([q.my_type for q in request.queries]) == ['command']:
+
+        elif squeries == ['command']:
             for query in [q for q in request.queries if q.my_type == 'command']:
                 result = query.launch_query()
                 response = query.response
                 response.format_live_data(result, query.columns, query.aliases)
                 output, keepalive = response.respond()
+
         elif [q.my_type for q in request.queries if q.my_type != 'command'] == []:
             # Only external commands. Thruk uses it when it sends multiple
             # objects into a downtime.
@@ -135,8 +138,7 @@ class LiveStatus(object):
         else:
             # We currently do not handle this kind of composed request
             output = ""
-            logger.error("[Livestatus] We currently do not handle this kind of composed request")
-            print sorted([q.my_type for q in request.queries])
+            logger.error("[Livestatus] We currently do not handle this kind of composed request: %s" % squeries)
 
         logger.debug("[Livestatus] Request duration %.4fs" % (time.time() - request.tic))
         return output, keepalive
