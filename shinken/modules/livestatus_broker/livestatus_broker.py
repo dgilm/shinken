@@ -38,7 +38,7 @@ import re
 import traceback
 import Queue
 import threading
-import cPickle
+import gc
 
 from shinken.macroresolver import MacroResolver
 from shinken.basemodule import BaseModule
@@ -467,6 +467,7 @@ class LiveStatus_broker(BaseModule, Daemon):
                                     logger.error('Could not send response to client: %s' % err)
                                 else:
                                     self.write_protocol('', output)
+                                del output
                                 open_connections[socketid]['buffer'] = None
                                 del open_connections[socketid]['wait']
                                 del open_connections[socketid]['query']
@@ -489,6 +490,7 @@ class LiveStatus_broker(BaseModule, Daemon):
                                         logger.error('Could not send response to client: %s' % err)
                                     else:
                                         self.write_protocol('', output)
+                                    del output
                                     open_connections[socketid]['buffer'] = None
                                     del open_connections[socketid]['wait']
                                     del open_connections[socketid]['query']
@@ -645,6 +647,8 @@ class LiveStatus_broker(BaseModule, Daemon):
                                 open_connections[socketid]['query'] = query
                                 open_connections[socketid]['nexttry'] = now
 
+                            del response
+                            gc.collect()
                         if close_it:
                             # Register this socket for deletion
                             kick_connections.append(s.fileno())
