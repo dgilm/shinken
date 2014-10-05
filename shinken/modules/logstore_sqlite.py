@@ -326,9 +326,47 @@ class LiveStatusLogStoreSqlite(BaseModule):
             # This is necessary to shrink the database file
             try:
                 self.execute('VACUUM')
-            except sqlite3.DatabaseError, exp:
-                logger.error("[Logstore SQLite] WARNING: it seems your database is corrupted. Please recreate it")
+            except sqlite3.DatabaseError as err:
+                logger.error("[Logstore SQLite] WARNING: it seems your database is corrupted. Error=%s. Please recreate it" % err)
             self.commit()
+
+    def select(self, cmd, values=None, row_factory=None):
+        if values is None:
+            values = []
+        if sqlite3.paramstyle == 'pyformat':
+            matchcount = 0
+            for m in re.finditer(r"\?", cmd):
+                cmd = re.sub('\\?', '%(' + str(matchcount) + ')s', cmd, 1)
+                matchcount += 1
+            values = dict(zip([str(x) for x in xrange(len(values))], values))
+        already_had_row_factory = hasattr(self.dbconn, "row_factory")
+        if row_factory != None:
+            self.dbcursor.close()
+            if already_had_row_factory:
+                orig_row_factory = self.dbconn.row_factory
+            self.dbconn.row_factory = row_factory
+            # We need to create a new cursor which knows how to row_factory
+            # Simply setting conn.row_factory and using the old cursor
+            # would not work
+            self.dbcursor = self.dbconn.cursor()
+
+        self.dbcursor.execute(cmd, values)
+        while True:
+            dbresult = self.dbcursor.fetchmany()
+            if not dbresult:
+                break
+            if row_factory is not None:
+                if sqlite3.paramstyle == 'pyformat':
+                    dbresult = (row_factory(self.dbcursor, d) for d in dbresult)
+                if already_had_row_factory:
+                    self.dbconn.row_factory = orig_row_factory
+                else:
+                    delattr(self.dbconn, "row_factory")
+                #self.dbcursor.close()
+                #self.dbcursor = self.dbconn.cursor()
+            for res in dbresult:
+                yield res
+
 
     def execute(self, cmd, values=None, row_factory=None):
         try:
