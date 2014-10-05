@@ -401,7 +401,6 @@ class LiveStatusLogStoreSqlite(BaseModule):
                         delattr(self.dbconn, "row_factory")
                     self.dbcursor.close()
                     self.dbcursor = self.dbconn.cursor()
-                return [x for x in dbresult]
                 return dbresult
             else:
                 self.dbcursor.execute(cmd, values)
