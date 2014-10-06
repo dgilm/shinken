@@ -131,7 +131,7 @@ class LiveStatusResponse:
                     if isinstance(value, list):
                         l.append(self.separators.list.join(str(x) for x in value))
                     elif isinstance(value, bool):
-                        if value == True:
+                        if value is True:
                             l.append('1')
                         else:
                             l.append('0')
