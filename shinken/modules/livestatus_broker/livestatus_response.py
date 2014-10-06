@@ -135,11 +135,13 @@ class LiveStatusResponse:
                     else:
                         try:
                             l.append(str(value))
-                        except UnicodeEncodeError:
+                        except UnicodeEncodeError as err:
+                            logger.warning('UnicodeEncodeError on str() of: %r : %s' % (value, err))
                             l.append(value.encode('utf-8', 'replace'))
                         except Exception as err:
-                            logger.error('Unexpected error while building response: %s' % err)
+                            logger.warning('Unexpected error on str() of: %r : %s' % (value, err))
                             l.append('')
+
                 lines.append(self.separators.field.join(l) + self.separators.line)
 
             if len(lines) > 0:
@@ -170,7 +172,7 @@ class LiveStatusResponse:
                     attribute = 'lsm_' + c
                     try:
                         value = getattr(item, attribute)(self.query)
-                    except Exception, exp:
+                    except Exception as exp:
                         if hasattr(item, attribute):
                             #print "FALLBACK: %s.%s" % (type(item), attribute)
                             value = getattr(item.__class__, attribute).im_func.default
@@ -183,9 +185,11 @@ class LiveStatusResponse:
                     else:
                         try:
                             rows.append(value)
-                        except UnicodeEncodeError:
+                        except UnicodeEncodeError as err:
+                            logger.warning('UnicodeEncodeError on str() of: %r : %s' % (value, err))
                             rows.append(value.encode('utf-8', 'replace'))
-                        except Exception:
+                        except Exception as err:
+                            logger.warning('Unexpected error on str() of: %r : %s' % (value, err))
                             rows.append(u'')
                 lines.append(rows)
 
@@ -196,7 +200,7 @@ class LiveStatusResponse:
 
         else:
             # TODO: handle some error..
-            pass
+            raise RuntimeError('Unhandled output format: %r' % self.outputformat)
 
     def format_live_data_stats(self, result, columns, aliases):
         showheader = False
