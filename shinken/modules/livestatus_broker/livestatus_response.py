@@ -22,7 +22,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
-
+from collections import namedtuple
 
 from shinken.log import logger
 
@@ -42,6 +42,10 @@ except ImportError:
         JSONEncoder.key_separator = ':'
 
 
+Separators = namedtuple('Separators',
+                        ('line', 'field', 'list', 'pipe')) # pipe is used within livestatus_broker.mapping 
+
+
 class LiveStatusResponse:
 
     """A class which represents the response to a livestatus request.
@@ -53,7 +57,7 @@ class LiveStatusResponse:
 
     """
 
-    separators = map(lambda x: chr(int(x)), [10, 59, 44, 124])
+    separators = Separators('\n', ';', ',', '|')
 
     def __init__(self, responseheader='off', outputformat='csv', keepalive='off', columnheaders='off', separators=separators):
         self.responseheader = responseheader
@@ -63,7 +67,6 @@ class LiveStatusResponse:
         self.separators = separators
         self.statuscode = 200
         self.output = ''
-        pass
 
     def __str__(self):
         output = "LiveStatusResponse:\n"
@@ -107,7 +110,7 @@ class LiveStatusResponse:
                             # If nothing else helps, leave the column blank
                             value = ''
                     if isinstance(value, list):
-                        l.append(self.separators[2].join(str(x) for x in value))
+                        l.append(self.separators.list.join(str(x) for x in value))
                     elif isinstance(value, bool):
                         if value == True:
                             l.append('1')
@@ -121,7 +124,7 @@ class LiveStatusResponse:
                         except Exception as err:
                             logger.error('Unexpected error while building response: %s' % err)
                             l.append('')
-                lines.append(self.separators[1].join(l))
+                lines.append(self.separators.field.join(l))
             if len(lines) > 0:
                 if self.columnheaders != 'off' or not query_with_columns:
                     if len(aliases) > 0:
@@ -136,10 +139,10 @@ class LiveStatusResponse:
             if showheader:
                 if len(aliases) > 0:
                     # This is for statements like "Stats: .... as alias_column
-                    lines.insert(0, self.separators[1].join([aliases[col] for col in columns]))
+                    lines.insert(0, self.separators.field.join([aliases[col] for col in columns]))
                 else:
-                    lines.insert(0, self.separators[1].join(columns))
-            self.output = self.separators[0].join(lines)
+                    lines.insert(0, self.separators.field.join(columns))
+            self.output = self.separators.line.join(lines)
 
         elif self.outputformat == 'json' or self.outputformat == 'python':
             for item in result:
@@ -189,7 +192,7 @@ class LiveStatusResponse:
                 l = []
                 for x in [item[c] for c in columns]:
                     if isinstance(x, list):
-                        l.append(self.separators[2].join(str(y) for y in x))
+                        l.append(self.separators.list.join(str(y) for y in x))
                     elif isinstance(x, bool):
                         if x == True:
                             l.append("1")
@@ -202,7 +205,7 @@ class LiveStatusResponse:
                             l.append(x.encode("utf-8", "replace"))
                         except Exception:
                             l.append("")
-                lines.append(self.separators[1].join(l))
+                lines.append(self.separators.field.join(l))
             if len(lines) > 0:
                 if self.columnheaders != 'off' or len(columns) == 0:
                     if len(aliases) > 0:
@@ -218,10 +221,12 @@ class LiveStatusResponse:
             if showheader:
                 if len(aliases) > 0:
                     # This is for statements like "Stats: .... as alias_column
-                    lines.insert(0, self.separators[1].join([aliases[col] for col in columns]))
+                    lines.insert(0, self.separators.field.join([aliases[col] for col in columns]))
                 else:
-                    lines.insert(0, self.separators[1].join(columns))
-            self.output = self.separators[0].join(lines)
+                    lines.insert(0, self.separators.field.join(columns))
+
+            self.output = self.separators.line.join(lines)
+
         elif self.outputformat == 'json' or self.outputformat == 'python':
             for item in result:
                 rows = []

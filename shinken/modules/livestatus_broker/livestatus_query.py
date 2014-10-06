@@ -27,12 +27,15 @@ import os
 import re
 import time
 import copy
+
+from shinken.log import logger
+
 from mapping import table_class_map, find_filter_converter, list_livestatus_attributes, Problem
 from livestatus_response import LiveStatusResponse
 from livestatus_stack import LiveStatusStack
 from livestatus_constraints import LiveStatusConstraints
 from livestatus_query_metainfo import LiveStatusQueryMetainfo
-from shinken.log import logger
+from livestatus_response import Separators
 
 
 class LiveStatusQueryError(Exception):
@@ -243,7 +246,7 @@ class LiveStatusQuery(object):
                 self.stats_filter_stack.or_elements(ornum)
             elif keyword == 'Separators':
                 _, sep1, sep2, sep3, sep4 = line.split(' ', 5)
-                self.response.separators = map(lambda x: chr(int(x)), [sep1, sep2, sep3, sep4])
+                self.response.separators = Separators(sep1, sep2, sep3, sep4)
             elif keyword == 'Localtime':
                 _, self.client_localtime = self.split_option(line)
             elif keyword == 'COMMAND':
