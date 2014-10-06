@@ -130,11 +130,9 @@ class LiveStatusResponse:
                             value = ''
                     if isinstance(value, list):
                         l.append(self.separators.list.join(str(x) for x in value))
+
                     elif isinstance(value, bool):
-                        if value is True:
-                            l.append('1')
-                        else:
-                            l.append('0')
+                        l.append('1' if value else '0')
                     else:
                         try:
                             l.append(str(value))
@@ -180,11 +178,9 @@ class LiveStatusResponse:
                         else:
                             rows.append(u'')
                             continue
+
                     if isinstance(value, bool):
-                        if value == True:
-                            rows.append(1)
-                        else:
-                            rows.append(0)
+                        rows.append(1 if value else 0)
                     else:
                         try:
                             rows.append(value)
@@ -204,29 +200,29 @@ class LiveStatusResponse:
             pass
 
     def format_live_data_stats(self, result, columns, aliases):
-        lines = LiveStatusStreamResponse()
         showheader = False
+        lines = LiveStatusStreamResponse()
         if self.outputformat == 'csv':
             # statsified results always have columns (0, 1, 2, ...)
             for item in result:
                 # Construct one line of output for each object found
                 l = []
-                for x in [item[c] for c in columns]:
-                    if isinstance(x, list):
-                        l.append(self.separators.list.join(str(y) for y in x))
-                    elif isinstance(x, bool):
-                        if x is True:
-                            l.append("1")
-                        else:
-                            l.append("0")
+                for value in [item[c] for c in columns]:
+                    if isinstance(value, list):
+                        l.append(self.separators.list.join(str(y) for y in value))
+                    elif isinstance(value, bool):
+                        l.append('1' if value else '0')
                     else:
                         try:
-                            l.append(str(x))
-                        except UnicodeEncodeError:
-                            l.append(x.encode("utf-8", "replace"))
-                        except Exception:
+                            l.append(str(value))
+                        except UnicodeEncodeError as err:
+                            logger.warning('UnicodeEncodeError on str() of: %r : %s' % (value, err))
+                            l.append(value.encode("utf-8", "replace"))
+                        except Exception as err:
+                            logger.warning('Unexpected error on str() of: %r : %s' % (value, err))
                             l.append("")
                 lines.append(self.separators.field.join(l) + self.separators.line)
+            # end for item in result
 
             if len(lines) > 0:
                 lines[-1] = lines[-1][:-1] # skip last added separator
@@ -255,10 +251,7 @@ class LiveStatusResponse:
                 rows = []
                 for c in columns:
                     if isinstance(item[c], bool):
-                        if item[c] is True:
-                            rows.append(1)
-                        else:
-                            rows.append(0)
+                        rows.append(1 if item[c] else 0)
                     else:
                         rows.append(item[c])
                 lines.append(rows)
