@@ -255,7 +255,7 @@ class LiveStatusResponse:
                 rows = []
                 for c in columns:
                     if isinstance(item[c], bool):
-                        if object[c] == True:
+                        if item[c] is True:
                             rows.append(1)
                         else:
                             rows.append(0)
