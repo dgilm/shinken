@@ -38,9 +38,7 @@ class LiveStatusWaitQuery(LiveStatusQuery):
     my_type = 'wait'
 
     def __init__(self, *args, **kwargs):
-        #super(LiveStatusWaitQuery, self).__init__(*args, **kwargs)
-        LiveStatusQuery.__init__(self, *args, **kwargs)
-        self.response = LiveStatusResponse(responseheader='off', outputformat='csv', keepalive='off', columnheaders='undef', separators=LiveStatusResponse.separators)
+        super(LiveStatusWaitQuery, self).__init__(*args, **kwargs)
         self.response = LiveStatusResponse()
         self.wait_start = time.time()
         self.wait_timeout = 0
