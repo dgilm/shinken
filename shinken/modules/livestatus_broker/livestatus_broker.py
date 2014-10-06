@@ -52,6 +52,7 @@ from shinken.misc.datamanager import datamgr
 from livestatus import LiveStatus
 from livestatus_regenerator import LiveStatusRegenerator
 from livestatus_query_cache import LiveStatusQueryCache
+from livestatus_response import LiveStatusStreamResponse
 
 
 # Class for the LiveStatus Broker
@@ -371,6 +372,14 @@ class LiveStatus_broker(BaseModule, Daemon):
         except:
             pass
 
+    def _iter_streamresponse(self, streamresponse):
+        for obj in streamresponse:
+            if isinstance(obj, LiveStatusStreamResponse):
+                for v in self._iter_streamresponse(obj):
+                    yield v
+            else:
+                yield obj
+
     # It's the thread function that will get broks
     # and update data. Will lock the whole thing
     # while updating
@@ -618,10 +627,13 @@ class LiveStatus_broker(BaseModule, Daemon):
 
                         if handle_it:
                             open_connections[socketid]['buffer'] = open_connections[socketid]['buffer'].rstrip()
+
                             response, keepalive = self.livestatus.handle_request(open_connections[socketid]['buffer'])
-                            if isinstance(response, str):
+                            if isinstance(response, (str, LiveStatusStreamResponse)):
                                 try:
-                                    s.send(response)
+                                    for data in self._iter_streamresponse(response):
+                                        s.send(data)
+                                        del data
                                 except Exception as err:
                                     # Maybe the request was an external command and
                                     # the peer is not interested in a response at all

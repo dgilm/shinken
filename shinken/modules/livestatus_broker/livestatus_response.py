@@ -46,8 +46,12 @@ Separators = namedtuple('Separators',
                         ('line', 'field', 'list', 'pipe')) # pipe is used within livestatus_broker.mapping 
 
 
-class LiveStatusResponse:
+class LiveStatusStreamResponse(list):
+    ''' A class to be able to recognize list of data/bytes to be sent vs plain data/bytes '''
 
+
+
+class LiveStatusResponse:
     """A class which represents the response to a livestatus request.
 
     Public functions:
@@ -77,24 +81,39 @@ class LiveStatusResponse:
     def load(self, query):
         self.query = query
 
-    def respond(self):
-        self.output += '\n'
-        if self.responseheader == 'fixed16':
-            responselength = len(self.output)
-            self.output = '%3d %11d\n' % (self.statuscode, responselength) + self.output
+    def get_response_len(self, obj=None):
+        if obj is None:
+            obj = self.output
+        if isinstance(obj, LiveStatusStreamResponse):
+            return sum(self.get_response_len(i) for i in obj)
+        else:
+            return len(obj)
 
+    def respond(self):
+        if self.responseheader == 'fixed16':
+            responselength = 1 + self.get_response_len() # 1 for the final '\n'
+            self.output = LiveStatusStreamResponse(('%3d %11d\n' % (self.statuscode, responselength), self.output, '\n'))
         return self.output, self.keepalive
 
     def format_live_data(self, result, columns, aliases):
+        '''
+
+        :param result:
+        :param columns:
+        :param aliases:
+        :return:
+        '''
         if self.query.stats_query:
             return self.format_live_data_stats(result, columns, aliases)
-        lines = []
+
         showheader = False
         query_with_columns = len(columns) != 0
         if not query_with_columns:
             columns = self.query.table_class_map[self.query.table][1].lsm_columns
             # There is no pre-selected list of columns. In this case
             # we output all columns.
+
+        lines = LiveStatusStreamResponse()
         if self.outputformat == 'csv':
             for item in result:
                 # Construct one line of output for each object found
@@ -124,8 +143,10 @@ class LiveStatusResponse:
                         except Exception as err:
                             logger.error('Unexpected error while building response: %s' % err)
                             l.append('')
-                lines.append(self.separators.field.join(l))
+                lines.append(self.separators.field.join(l) + self.separators.line)
+
             if len(lines) > 0:
+                lines[-1] = lines[-1][:-1]  # remove last separator added
                 if self.columnheaders != 'off' or not query_with_columns:
                     if len(aliases) > 0:
                         showheader = True
@@ -136,13 +157,14 @@ class LiveStatusResponse:
                             pass
             elif self.columnheaders == 'on':
                 showheader = True
+
             if showheader:
-                if len(aliases) > 0:
-                    # This is for statements like "Stats: .... as alias_column
-                    lines.insert(0, self.separators.field.join([aliases[col] for col in columns]))
-                else:
-                    lines.insert(0, self.separators.field.join(columns))
-            self.output = self.separators.line.join(lines)
+                lines.insert(0, self.separators.field.join(
+                    (aliases[col] for col in columns) if len(aliases)
+                    else columns
+                ) + self.separators.line)
+
+            self.output = lines
 
         elif self.outputformat == 'json' or self.outputformat == 'python':
             for item in result:
@@ -173,17 +195,16 @@ class LiveStatusResponse:
                 lines.append(rows)
 
             if self.columnheaders == 'on':
-                if len(aliases) > 0:
-                    lines.insert(0, [str(aliases[col]) for col in columns])
-                else:
-                    lines.insert(0, columns)
-            if self.outputformat == 'json':
-                self.output = dumps(lines)
-            else:
-                self.output = str(lines)
+                lines.insert(0, (str(aliases[col]) for col in columns) if len(aliases) else columns)
+
+            self.output = (dumps if self.outputformat == 'json' else str)(lines)
+
+        else:
+            # TODO: handle some error..
+            pass
 
     def format_live_data_stats(self, result, columns, aliases):
-        lines = []
+        lines = LiveStatusStreamResponse()
         showheader = False
         if self.outputformat == 'csv':
             # statsified results always have columns (0, 1, 2, ...)
@@ -194,7 +215,7 @@ class LiveStatusResponse:
                     if isinstance(x, list):
                         l.append(self.separators.list.join(str(y) for y in x))
                     elif isinstance(x, bool):
-                        if x == True:
+                        if x is True:
                             l.append("1")
                         else:
                             l.append("0")
@@ -205,8 +226,10 @@ class LiveStatusResponse:
                             l.append(x.encode("utf-8", "replace"))
                         except Exception:
                             l.append("")
-                lines.append(self.separators.field.join(l))
+                lines.append(self.separators.field.join(l) + self.separators.line)
+
             if len(lines) > 0:
+                lines[-1] = lines[-1][:-1] # skip last added separator
                 if self.columnheaders != 'off' or len(columns) == 0:
                     if len(aliases) > 0:
                         showheader = True
@@ -218,14 +241,14 @@ class LiveStatusResponse:
                             pass
             elif self.columnheaders == 'on':
                 showheader = True
-            if showheader:
-                if len(aliases) > 0:
-                    # This is for statements like "Stats: .... as alias_column
-                    lines.insert(0, self.separators.field.join([aliases[col] for col in columns]))
-                else:
-                    lines.insert(0, self.separators.field.join(columns))
 
-            self.output = self.separators.line.join(lines)
+            if showheader:
+                lines.insert(0, self.separators.field.join(
+                    (str(aliases[col]) for col in columns) if len(aliases)
+                    else columns))
+                lines[0] += self.separators.line
+
+            self.output = lines
 
         elif self.outputformat == 'json' or self.outputformat == 'python':
             for item in result:
@@ -239,12 +262,8 @@ class LiveStatusResponse:
                     else:
                         rows.append(item[c])
                 lines.append(rows)
+
             if self.columnheaders == 'on':
-                if len(aliases) > 0:
-                    lines.insert(0, [str(aliases[col]) for col in columns])
-                else:
-                    lines.insert(0, columns)
-            if self.outputformat == 'json':
-                self.output = dumps(lines)
-            else:
-                self.output = str(lines)
+                lines.insert(0, (str(aliases[col]) for col in columns) if len(aliases) else columns)
+
+            self.output = (dumps if self.outputformat == 'json' else str)(lines)
