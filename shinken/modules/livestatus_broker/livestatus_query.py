@@ -612,6 +612,10 @@ class LiveStatusQuery(object):
         return output
 
     def get_live_data_log(self, cs):
+        '''
+        :param cs: The `LiveStatusConstraints´ instance to use for the live data logs.
+        :return: a generator which yields logs matching the given "cs" constaints.
+        '''
         for x in self.db.get_live_data_log():
             z = x.fill(self.datamgr)
             if cs.without_filter or cs.filter_func(z):
